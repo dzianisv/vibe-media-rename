@@ -8,7 +8,7 @@ This package provides functionality to:
 - Rename files with location and timestamp information
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Vibe Tools"
 __email__ = "tools@vibe.dev"
 

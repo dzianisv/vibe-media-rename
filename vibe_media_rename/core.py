@@ -289,29 +289,45 @@ class MediaRenamer:
     def get_location_name(self, latitude: float, longitude: float) -> Optional[str]:
         """Convert coordinates to place name using geocoding."""
         try:
-            location = self.geocoder.reverse(f"{latitude}, {longitude}", timeout=10)
+            location = self.geocoder.reverse(f"{latitude}, {longitude}", timeout=10, language='en')
             if location and location.raw:
                 address = location.raw.get('address', {})
                 
-                # Extract place components
-                place = (address.get('village') or 
+                # Extract place components with better fallback logic
+                place = (address.get('attraction') or
+                        address.get('tourism') or 
+                        address.get('village') or 
                         address.get('hamlet') or 
                         address.get('suburb') or
                         address.get('neighbourhood') or
                         address.get('city_district') or
+                        address.get('quarter') or
+                        address.get('residential') or
+                        address.get('city') or
+                        address.get('town') or
+                        address.get('municipality') or
                         "Unknown")
                 
                 city = (address.get('city') or 
                        address.get('town') or 
                        address.get('municipality') or
+                       address.get('county') or
+                       address.get('administrative_area_level_2') or
                        "Unknown")
                 
                 state = (address.get('state') or 
                         address.get('province') or 
                         address.get('region') or
+                        address.get('administrative_area_level_1') or
                         "Unknown")
                 
                 country = address.get('country', "Unknown")
+                
+                # Clean up the components - remove Chinese characters and non-ASCII
+                place = self._clean_location_component(place)
+                city = self._clean_location_component(city)
+                state = self._clean_location_component(state)
+                country = self._clean_location_component(country)
                 
                 return f"{place}_{city}_{state}_{country}"
                 
@@ -321,6 +337,22 @@ class MediaRenamer:
             print(f"Warning: Unexpected geocoding error: {e}")
         
         return None
+    
+    def _clean_location_component(self, component: str) -> str:
+        """Clean location component to be ASCII and filesystem-safe."""
+        if not component or component == "Unknown":
+            return "Unknown"
+        
+        # Try to keep only ASCII characters
+        try:
+            # Remove non-ASCII characters
+            ascii_component = ''.join(char for char in component if ord(char) < 128)
+            if ascii_component.strip():
+                return self._clean_filename_part(ascii_component.strip())
+        except:
+            pass
+        
+        return "Unknown"
     
     def apply_location_heuristic(self, files_metadata: List[FileMetadata]) -> List[FileMetadata]:
         """Apply heuristic to assign locations to files without GPS data."""
@@ -376,8 +408,8 @@ class MediaRenamer:
         else:
             location_str = "Unknown_Unknown_Unknown_Unknown"
         
-        # Clean original name
-        clean_original = self._clean_filename_part(original_name)
+        # Clean original name - remove existing location/date prefixes
+        clean_original = self._clean_original_filename(original_name)
         
         new_filename = f"{location_str}_{creation_time}_{clean_original}{extension}"
         
@@ -390,6 +422,29 @@ class MediaRenamer:
                 new_filename = f"{location_str}_{creation_time}_{clean_original}{extension}"
         
         return new_filename
+    
+    def _clean_original_filename(self, original_name: str) -> str:
+        """Clean original filename by removing existing location/date prefixes."""
+        # Remove common location prefixes patterns like "San Francisco_2025-06-22_"
+        import re
+        
+        # Pattern 1: Location_Date_ prefix (e.g., "San Francisco_2025-06-22_")
+        pattern1 = r'^[^_]+_\d{4}-\d{2}-\d{2}_'
+        cleaned = re.sub(pattern1, '', original_name)
+        
+        # Pattern 2: Multiple location components with date (e.g., "Place_City_State_Country_YYYYMMDD_HHMMSS_")
+        pattern2 = r'^[^_]+_[^_]+_[^_]+_[^_]+_\d{8}_\d{6}_'
+        cleaned = re.sub(pattern2, '', cleaned)
+        
+        # Pattern 3: Just date prefix (e.g., "20250622_173653_")
+        pattern3 = r'^\d{8}_\d{6}_'
+        cleaned = re.sub(pattern3, '', cleaned)
+        
+        # If we cleaned too much, fall back to original
+        if not cleaned.strip():
+            cleaned = original_name
+        
+        return self._clean_filename_part(cleaned)
     
     def _clean_filename_part(self, part: str) -> str:
         """Clean a part of filename to be filesystem-safe."""
@@ -438,7 +493,12 @@ class MediaRenamer:
         print("\nResolving coordinates to location names...")
         for i, metadata in enumerate(files_metadata):
             if metadata.latitude is not None and metadata.longitude is not None:
+                print(f"Geocoding {metadata.filepath.name}: {metadata.latitude:.6f}, {metadata.longitude:.6f}")
                 location_name = self.get_location_name(metadata.latitude, metadata.longitude)
+                if location_name:
+                    print(f"  -> {location_name}")
+                else:
+                    print(f"  -> Geocoding failed, using Unknown")
                 files_metadata[i] = metadata._replace(location_name=location_name)
         
         # Generate new filenames and rename
