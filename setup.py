@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="vibe-media-rename",
-    version="1.0.2",
+    version="1.0.3",
     author="Vibe Tools",
     author_email="tools@vibe.dev",
     description="A tool to rename media files based on location metadata with smart heuristics",

@@ -267,8 +267,8 @@ class MediaRenamer:
     def _parse_location_string(self, location_str: str) -> Optional[Tuple[float, float]]:
         """Parse various location string formats to extract coordinates."""
         try:
-            # ISO 6709 format: +DDMM.MMMM+DDDMM.MMMM/
-            iso_match = re.match(r'([+-]\d+\.?\d*)[+-](\d+\.?\d*)', location_str)
+            # ISO 6709 format: +DDMM.MMMM+DDDMM.MMMM/ or +DD.DDDD-DDD.DDDD/
+            iso_match = re.match(r'([+-]\d+\.?\d*)([+-]\d+\.?\d*)', location_str)
             if iso_match:
                 lat = float(iso_match.group(1))
                 lon = float(iso_match.group(2))

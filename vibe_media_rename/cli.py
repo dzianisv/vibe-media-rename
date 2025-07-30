@@ -50,7 +50,7 @@ Supported formats:
     parser.add_argument(
         '--version',
         action='version',
-        version='%(prog)s 1.0.2'
+        version='%(prog)s 1.0.3'
     )
     
     # Parse arguments
@@ -73,7 +73,7 @@ Supported formats:
         sys.exit(1)
     
     # Show summary
-    print(f"Vibe Media Rename v1.0.2")
+    print(f"Vibe Media Rename v1.0.3")
     print(f"Mode: {'DRY RUN' if args.dry_run else 'RENAME FILES'}")
     print(f"Files found: {len(filepaths)}")
     
