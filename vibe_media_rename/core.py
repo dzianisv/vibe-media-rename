@@ -425,22 +425,23 @@ class MediaRenamer:
     
     def _clean_original_filename(self, original_name: str) -> str:
         """Clean original filename by removing existing location/date prefixes."""
-        # Remove common location prefixes patterns like "San Francisco_2025-06-22_"
         import re
         
-        # Pattern 1: Location_Date_ prefix (e.g., "San Francisco_2025-06-22_")
-        pattern1 = r'^[^_]+_\d{4}-\d{2}-\d{2}_'
-        cleaned = re.sub(pattern1, '', original_name)
+        cleaned = original_name
         
-        # Pattern 2: Multiple location components with date (e.g., "Place_City_State_Country_YYYYMMDD_HHMMSS_")
+        # Pattern 1: "Location Name_YYYY-MM-DD_" (handles spaces in location)
+        pattern1 = r'^.+?_\d{4}-\d{2}-\d{2}_'
+        cleaned = re.sub(pattern1, '', cleaned)
+        
+        # Pattern 2: "Place_City_State_Country_YYYYMMDD_HHMMSS_"
         pattern2 = r'^[^_]+_[^_]+_[^_]+_[^_]+_\d{8}_\d{6}_'
         cleaned = re.sub(pattern2, '', cleaned)
         
-        # Pattern 3: Just date prefix (e.g., "20250622_173653_")
+        # Pattern 3: Just date prefix "YYYYMMDD_HHMMSS_"
         pattern3 = r'^\d{8}_\d{6}_'
         cleaned = re.sub(pattern3, '', cleaned)
         
-        # If we cleaned too much, fall back to original
+        # If we cleaned everything, use the original filename
         if not cleaned.strip():
             cleaned = original_name
         
